@@ -1,125 +1,238 @@
-/* .App {
-  text-align: center;
-} */
+import axios from 'axios';
+import './App.css';
+// import React, {useState} from "react"
+import stubs from "./defaultStubs";
+import React, { useState, useEffect } from "react";
+// import Editor from './index'
+import CodeMirror from '@uiw/react-codemirror';
+// import 'codemirror/keymap/sublime';
+import 'codemirror/lib/codemirror.css';
+import 'codemirror/theme/dracula.css';
+import 'codemirror/lib/codemirror.js'
+import { sublime } from '@uiw/codemirror-theme-sublime';
+import { cpp } from '@codemirror/lang-cpp';
+import moment from 'moment'
+//  import { cpp } from '@uiw/react-codemirror/lang-cpp';
 
-/* .App, .App-header, .App-footer{
-  background-image: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSmcu0aW7tyi3BgrZfQw2yc7HDE9yy05o1vr2NfoAxXC9g7l85IoBx430KRgC2z_D2Bt2g&usqp=CAU");
-} */
-body{
-  background-image: url("ppo.jpg") ;
-  
+function App(){
+const [code, setCode]=useState('');
+const [output, setOutput]=useState("");
+const [language, setLanguage] = useState("cpp");
+const [jobId, setJobId] = useState(null);
+const [status, setStatus] = useState(null);
+const [jobDetails, setJobDetails] = useState(null);
+const [input, setInput] = useState("");
 
-}
-.App{
-  color:white;
-}
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
+// const handleSubmit = async ()=>{
+//   const payload = {
+//     language,
+//     code
+// };
+// try{
+// const {data} = await axios.post("http://localhost:5003/run", payload);
+// setOutput(data.jobId);
+// }
+// catch({response}){
+//   if (response){
+
+//      const errMsg = response.data.err.stderr;
+//         setOutput(errMsg);}
+//     else
+//     {
+//       setOutput("server issue");
+//     }
+//   }
+// };
+useEffect(() => {
+  setCode(stubs[language]);
+}, [language]);
+
+useEffect(() => {
+  const defaultLang = localStorage.getItem("default-language") || "cpp";
+  setLanguage(defaultLang);
+}, []);
+let pollInterval,kll;
+const handleSubmit = async () => {
+  const payload = {
+    language,
+    code,
+    input,
+  };
+  try {
+    setOutput("");
+    setStatus(null);
+    setJobId(null);
+    setJobDetails(null);
+    const { data } = await axios.post("https://react-one.onrender.com/run", payload);
+    if (data.jobId) {
+      setJobId(data.jobId);
+      setStatus("Submitted.");
+      
+      // poll here
+      //  kll=setInterval({df},1000);
+      pollInterval = setInterval(async () => {
+        const { data: statusRes } = await axios.get(
+          `https://react-one.onrender.com/status`,
+          {
+            params: {
+              id: data.jobId,
+            },
+          }
+        );
+        const { success, job, error } = statusRes;
+         console.log(statusRes);
+       
+        if (success) {
+          const { status: jobStatus, output: jobOutput } = job;
+           setStatus(jobStatus); 
+          // df(jobstatus);
+          setJobDetails(job);
+          if (jobStatus === "pending") return;
+          setOutput(jobOutput);
+          clearInterval(pollInterval);
+        } else {
+          console.error(error);
+          setOutput(error);
+          setStatus("Bad request");
+          clearInterval(pollInterval);
+        }
+      }, 1000);
+    } else {
+      setOutput("Retry again.");
+    }
+  } catch ({ response }) {
+    if (response) {
+      const errMsg = response.data.err.stderr;
+      setOutput(errMsg);
+    } else {
+      setOutput("Please retry submitting.");
+    }
   }
-}
+};
+  const renderTimeDetails = () => {
+    if (!jobDetails) {
+      return "";
+    }
+    let { submittedAt, startedAt, completedAt } = jobDetails;
+    let result = "";
+    submittedAt = moment(submittedAt).toString();
+    // result += `Job Submitted At: ${submittedAt}  `;
+    if (!startedAt || !completedAt) return result;
+    const start = moment(startedAt);
+    const end = moment(completedAt);
+    const diff = end.diff(start, "seconds", true);
+    result += `Execution Time: ${diff}s`;
+    return result;
+  };
 
-.App-header {
-  background-color: black;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  /* color: white; */
-}
-
-.App-link {
-  /* color: #61dafb; */
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-.hj{
-  margin:90px;
-
-}
-.kl{
-  margin-left:20px ;
-  background-color:black;
-  /* opacity:0.3; */
-  /* color:black; */
-  font-size:20px;
-}
-.gh{
-  position:absolute;
-  /* margin-bottom:444px; */
-  /* left:10px; */
-  /* font-size:2 px; */
- margin-right:10px;
-  margin-left:720px;
-  margin-top:50px;
-  /* display: flex;
-  flex-direction: column; */
-  /* align-items: center;
-  justify-content: center; */
-  /* margin-right:30px; */
-  /* margin-bottom:100 px; */
-  /* margin: auto;
-  width: 50%;
-  border: 3px solid green;
-  padding: 10px; */
-}
-.ff{
-  margin-left:610px;
-  margin-top:400px;
-}
-textarea
-{
-
-  background-color:black;
-  opacity:0.3;
-  color:white;
-}
-.kk
-{
-  color: #90ee90;
-  font-size:20px;
-}
-.jj
-{
-  color: yellow;
-  font-size:20px;
-}
-.ll
-{
-  color: red;
-  font-size:20px;
-}
-.qw{
-  
-  margin-right:200px;
-}
-.po{
-  position:absolute;
-  margin-bottom:0px;
-  /* margin-bottom:444px; */
-  /* left:10px; */
-  /* font-size:2 px; */
+// const df =async ({status}) => {
+//   if ({status}==="success")
+//   alert(<p style={{color:"green"}}>"SUCCESS"</p>);
+//    else
+//    alert(<p style={{color:"red"}}>{status}
+//   </p>);
+// };
+// var cEditor = CodeMirror.fromTextArea(document.getElementById("kl"), {
+//   lineNumbers: true,
+//   matchBrackets: true,
+//   mode: "text/x-csrc",
+//   readOnly: true,
+//   styleActiveLine: true,
+//   theme: "eclipse"
+// })
+return (
+  <div className ="App">
+    <h1>Online Code Editor</h1>
+    <span className="po">
+        <label>Language:</label>
+        <select
+        
+          value={language}
+          onChange={(e) => {
+            // const shouldSwitch = window.confirm(
+            //   "Are you sure you want to change language? WARNING: Your current code will be lost."
+            // );
+            // if (shouldSwitch) {
+              setLanguage(e.target.value);
+              console.log(e.target.value);
+            // }
+          }}
+          >
+          <option value="cpp">C++</option>
+        <option value="py">Python</option>
+        
+      
+        </select>
+        <br></br><br></br>
+        
+      
+      
+    {/* <textarea class="kl" rows ="25" cols ="85" value ={code} onChange={(e)=>{
+      setCode(e.target.value)
+    }}></textarea> */}
+    {/* <div className="kl">
+    <CodeMirror
+value={code}
+options={{
+  theme: 'dracula',
+   keyMap: 'sublime',
  
-  /* margin-left:20px; */
-  /* margin-right:30px; */
-  /* margin-bottom:100 px; */
-  /* margin: auto;
-  width: 50%;
-  border: 3px solid green;
-  padding: 10px; */
-}
+  mode: 'cpp',
+}}
+// value="console.log('hello world!');"
+//       height="200px"
+//       extensions={[cpp({ cpp: true })]}
+onChange={(editor, data, value) => {
+  setCode(editor);
+}}
+// className="kl"
+className="w-96 h-80"
+/>
+     
+      </div> */}
+
+  {/* <textarea class="kl" rows ="5" cols ="8" value ={input} onChange={(e)=>{
+      setInput(e.target.value)
+    }}></textarea> */}
+    {/* </span> */}
+
+    {/* <textarea class="hj" rows ="10" cols ="20" value ={code} onChange={(e)=>{
+      setInput(e.target.value)
+    }}></textarea> */}
+    {/* <span ClassName="qw"> */}
+    <CodeMirror
+      value={code}
+      height="350px"
+      width="650px"
+      theme={sublime}
+      extensions={[cpp({ cpp: true })]}
+      onChange={(value, viewUpdate) => {
+        setCode(value);
+      }}
+    />
+    {/* </span> */}
+    </span>
+    
+
+    
+    
+    <span className="gh">
+     
+      <p className="kk">{status==="success" ? <strong>{status}</strong>:"" }</p>
+      <p className="jj">{status==="pending" ? <em>{status}</em>:"" }</p>
+      <p className="ll">{status==="error" ? <em>{status}</em>:"" }</p>
+      <p>{jobId ? `Your Code ID: ${jobId}` : ""}</p>
+      <p>{renderTimeDetails()}</p>
+      <p>{output}</p>
+  </span>
+  
+  <div><button className="ff" onClick={handleSubmit}>Submit</button></div>
+</div>
+
+)};
+ 
+export default App;
+// http://localhost:5099/run
+// http://localhost:3002/
